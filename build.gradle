@@ -12,18 +12,28 @@ buildscript {
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
+        classpath 'io.spring.gradle:dependency-management-plugin:0.6.1.RELEASE'
     }
 }
 
 apply plugin: 'forge'
+apply plugin: 'io.spring.dependency-management'
 
-version = "1.0"
-group= "com.yourname.modid" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "modid"
+def versionInfo = getGitVersion()
+
+version = "${versionInfo['Ephemeral.version']}"
+group= "com.indemnity83" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = "Ephemeral"
 
 minecraft {
     version = "1.7.10-10.13.4.1614-1.7.10"
     runDir = "eclipse"
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'com.amazonaws:aws-java-sdk-bom:1.10.47'
+    }
 }
 
 dependencies {
@@ -31,7 +41,7 @@ dependencies {
     // or you may define them like so..
     //compile "some.group:artifact:version:classifier"
     //compile "some.group:artifact:version"
-      
+
     // real examples
     //compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
     //compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
@@ -40,6 +50,8 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
+    compile 'com.amazonaws:aws-java-sdk-ec2'
+    testCompile group: 'junit', name: 'junit', version: '4.11'
 }
 
 processResources
@@ -51,13 +63,44 @@ processResources
     // replace stuff in mcmod.info, nothing else
     from(sourceSets.main.resources.srcDirs) {
         include 'mcmod.info'
-                
+
         // replace version and mcversion
         expand 'version':project.version, 'mcversion':project.minecraft.version
     }
-        
+
     // copy everything else, thats not the mcmod.info
     from(sourceSets.main.resources.srcDirs) {
         exclude 'mcmod.info'
     }
+}
+
+// This is a special task for pulling the version information from git and the environment (for BUILD_NUMBER)
+def getGitVersion()
+{
+	def out = [:]
+
+	// call git command.
+	def outStream = new ByteArrayOutputStream()
+	def result = exec {
+		executable = 'git'
+		args = [ 'describe', '--long']
+		standardOutput = outStream
+	}
+
+	def fullVersion = outStream.toString().trim()
+	def matcher = fullVersion =~ /(\d+).(\d+)-(\d+)-(.*)/
+
+	def maj = matcher[0][1]
+	def min = matcher[0][2]
+	def rev = matcher[0][3]
+	def bn = System.getenv("PROMOTED_NUMBER") ?: System.getenv("BUILD_NUMBER") ?: "1"
+
+	out['Ephemeral.build.major.number'] = maj.toString()
+	out['Ephemeral.build.minor.number'] = min.toString()
+	out['Ephemeral.build.revision.number'] = rev.toString()
+	out['Ephemeral.build.githash'] = matcher[0][4].toString()
+	out['Ephemeral.build.number' ] = bn.toString()
+	out['Ephemeral.version' ] = "${maj}.${min}.${rev}.${bn}".toString()
+
+	return out
 }
