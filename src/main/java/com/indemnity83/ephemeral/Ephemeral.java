@@ -25,6 +25,22 @@ public class Ephemeral {
     private static String accessKey = "aws-key";
     private static String secretKey = "aws-secret";
     private static String ec2Endpoint = "ec2.us-west-1.amazonaws.com";
+    private static String instanceImage = "ami-c481fad3";
+    private static String instanceType = "r3.large";
+
+    public static String getDefaultInstanceImage() {
+        return instanceImage;
+    }
+
+    public static String getDefaultInstanceType() {
+        return instanceType;
+    }
+
+    public static String getDefaultBidPrice() {
+        return bidPrice;
+    }
+
+    private static String bidPrice = "0.03";
 
     @Instance("Ephemeral")
     private static Ephemeral instance;
@@ -34,6 +50,9 @@ public class Ephemeral {
         accessKey = configFile.getString("accessKey", Configuration.CATEGORY_GENERAL, accessKey, "The AWS access key");
         secretKey = configFile.getString("secretKey", Configuration.CATEGORY_GENERAL, secretKey, "The AWS secret access key");
         ec2Endpoint = configFile.getString("EC2Endpoint", Configuration.CATEGORY_GENERAL, ec2Endpoint, "The AWS endpoint (region) to connect to");
+        instanceImage = configFile.getString("InstanceImage", Configuration.CATEGORY_GENERAL, instanceImage, "Instance image to use on launch");
+        instanceType = configFile.getString("InstanceType", Configuration.CATEGORY_GENERAL, instanceType, "Instance type to launch");
+        bidPrice = configFile.getString("bidPrice", Configuration.CATEGORY_GENERAL, bidPrice, "The maximum price you're willing to pay for the instance");
 
         if (configFile.hasChanged())
             configFile.save();
@@ -56,7 +75,9 @@ public class Ephemeral {
         FMLCommonHandler.instance().bus().register(instance);
 
         AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+
         ec2 = new AmazonEC2Client(credentials);
+        ec2.setEndpoint(ec2Endpoint);
     }
 
     @SubscribeEvent
